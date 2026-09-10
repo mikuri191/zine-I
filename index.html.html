@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>紫微斗数 命盤 — 無料で作成</title>
+<meta name="description" content="生年月日と出生時刻から紫微斗数の命盤を作成します。旧暦変換と十四主星の配置を計算し、命宮の型を判定します。">
+<style>
+:root{
+  --ground:#0e1119; --panel:#181d2a; --rule:#2b3345; --rule-soft:#20273699;
+  --ink:#e9e5da; --muted:#7f8698; --shi:#a689d6; --shu:#cc5f4d; --kin:#d0aa55;
+  --mincho:"Hiragino Mincho ProN","Yu Mincho",YuMincho,"Noto Serif JP","Songti SC",serif;
+  --gothic:"Hiragino Sans","Yu Gothic","Noto Sans JP",system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--ground); color:var(--ink); font-family:var(--gothic);
+  font-size:15px; line-height:1.7; -webkit-text-size-adjust:100%;
+  padding:28px 16px 64px;
+}
+.wrap{max-width:560px;margin:0 auto}
+
+h1{font-family:var(--mincho); font-size:27px; font-weight:600; letter-spacing:.14em;
+   margin:0 0 6px; line-height:1.4}
+.sub{color:var(--muted); font-size:13px; margin:0 0 30px; line-height:1.8}
+
+form{border-top:1px solid var(--rule); padding-top:20px}
+.row{display:flex; gap:12px; margin-bottom:14px; flex-wrap:wrap}
+.field{flex:1 1 140px; min-width:0}
+label{display:block; font-size:12px; color:var(--muted); margin-bottom:6px; letter-spacing:.05em}
+input,select{
+  width:100%; background:var(--panel); border:1px solid var(--rule); color:var(--ink);
+  font-family:var(--gothic); font-size:16px; padding:10px 11px; border-radius:3px;
+}
+input:focus,select:focus{outline:2px solid var(--shi); outline-offset:1px; border-color:transparent}
+.hint{font-size:12px; color:var(--muted); margin:2px 0 18px; line-height:1.7}
+button{
+  width:100%; background:var(--shi); color:#12101a; border:0; border-radius:3px;
+  font-family:var(--mincho); font-size:17px; font-weight:600; letter-spacing:.18em;
+  padding:13px; cursor:pointer;
+}
+button:hover{background:#b79ce0}
+button:focus-visible{outline:2px solid var(--ink); outline-offset:2px}
+
+#out{margin-top:38px; display:none}
+
+.meta{display:flex; flex-wrap:wrap; gap:0 18px; font-size:12.5px; color:var(--muted);
+      font-family:var(--mincho); letter-spacing:.06em; margin-bottom:14px}
+.meta b{color:var(--ink); font-weight:500}
+
+.chart{
+  display:grid; grid-template-columns:repeat(4,1fr); grid-template-rows:repeat(4,1fr);
+  gap:1px; background:var(--rule); border:1px solid var(--rule); font-family:var(--mincho);
+  aspect-ratio:1/1.06;
+}
+.cell{background:var(--panel); padding:5px 5px 3px; position:relative; overflow:hidden;
+      display:flex; flex-direction:column; min-width:0}
+.cell.ming{background:#241d38}
+.cell.shen{background:#1d2130}
+.stars{flex:1; display:flex; flex-wrap:wrap; align-content:flex-start; gap:0 5px;
+       font-size:11.5px; line-height:1.45; letter-spacing:.02em}
+.s-main{color:var(--ink)}
+.s-aux{color:#9aa2b4}
+.s-bad{color:var(--shu)}
+.s-empty{color:#4d5468; font-size:11px}
+.hua{font-size:9.5px; vertical-align:.28em; margin-left:1px}
+.hua.lu,.hua.ke{color:var(--kin)} .hua.quan{color:var(--shi)} .hua.ji{color:var(--shu)}
+.foot{display:flex; justify-content:space-between; align-items:flex-end; gap:4px;
+      font-size:10.5px; color:var(--muted); margin-top:3px}
+.pname{font-size:11.5px; color:#b9b3a6; letter-spacing:.04em}
+.cell.ming .pname{color:var(--shi)}
+.branch{font-size:13px; color:#6f7688}
+.dx{font-size:10px; color:#5f6678; letter-spacing:.02em}
+.center{grid-column:2/4; grid-row:2/4; background:var(--ground); display:flex;
+        flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:10px}
+.center .kata{font-family:var(--mincho); font-size:23px; letter-spacing:.1em; color:var(--ink); line-height:1.35}
+.center .katasub{font-size:11.5px; color:var(--muted); margin-top:7px; letter-spacing:.06em; font-family:var(--mincho)}
+.center .kaku{font-family:var(--mincho); font-size:12.5px; color:var(--kin); margin-top:10px; letter-spacing:.08em}
+
+.result{margin-top:26px; border-top:1px solid var(--rule); padding-top:22px}
+.chara{max-width:290px;margin:0 auto 20px}
+.chara svg{display:block;width:100%;height:auto}
+.result h2{font-family:var(--mincho); font-size:19px; font-weight:600; letter-spacing:.08em; margin:0 0 10px}
+.result p{font-size:14px; color:#c6c2b8; margin:0 0 16px; line-height:1.85}
+.actions{display:flex; gap:10px; flex-wrap:wrap}
+.actions a,.actions .copy{
+  flex:1 1 150px; text-align:center; text-decoration:none; font-family:var(--mincho);
+  font-size:15px; letter-spacing:.1em; padding:12px; border-radius:3px; cursor:pointer;
+  border:1px solid var(--rule); color:var(--ink); background:var(--panel); display:block;
+}
+.actions a.primary{background:var(--kin); color:#1a1508; border-color:var(--kin); font-weight:600}
+.actions .copy:hover,.actions a:hover{border-color:var(--shi)}
+.note{font-size:11.5px; color:var(--muted); margin-top:22px; line-height:1.8;
+      border-top:1px solid var(--rule-soft); padding-top:16px}
+.err{color:var(--shu); font-size:13px; margin-top:12px}
+@media (max-width:400px){
+  .stars{font-size:10.5px; gap:0 3px}
+  .cell{padding:4px 3px 2px}
+  .center .kata{font-size:20px}
+}
+@media (prefers-reduced-motion:no-preference){
+  #out.show{animation:rise .45s ease-out}
+  @keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>紫微斗数 命盤</h1>
+<p class="sub">生年月日と出生時刻から旧暦を割り出し、十四主星を十二宮に配置します。<br>結果はすべて無料で表示されます。</p>
+
+<form id="f" autocomplete="off">
+  <div class="row">
+    <div class="field"><label for="d">生年月日</label><input type="date" id="d" min="1900-01-01" max="2100-12-31" required></div>
+  </div>
+  <div class="row">
+    <div class="field"><label for="t">出生時刻</label><input type="time" id="t" required></div>
+    <div class="field"><label for="g">性別</label>
+      <select id="g"><option value="M">男性</option><option value="F">女性</option></select></div>
+  </div>
+  <div class="row">
+    <div class="field"><label for="pf">出生地</label><select id="pf"></select></div>
+  </div>
+  <p class="hint">出生時刻は母子手帳に記載があります。出生地は経度による時差を補正するために使います。時刻がずれると命宮が変わるため、できるだけ正確な値を入れてください。</p>
+  <button type="submit">命盤を出す</button>
+  <p class="err" id="err" hidden></p>
+</form>
+
+<div id="out">
+  <div class="meta" id="meta"></div>
+  <div class="chart" id="chart"></div>
+  <div class="result">
+    <div class="chara" id="chara"></div>
+    <h2 id="rh"></h2>
+    <p id="rp"></p>
+    <div class="actions">
+      <a class="primary" id="more" href="#" target="_blank" rel="noopener">この型の続きを読む</a>
+      <span class="copy" id="copy" role="button" tabindex="0">結果をコピー</span>
+    </div>
+  </div>
+  <p class="note">十二宮の配置は伝統的な計算式に基づき、旧暦変換は天文計算（朔と中気）で求めています。閏月にも対応しています。出生地の経度から時差を補正しています。星の廟旺（強弱）と乙級星は未対応です。23時台の出生は翌日の子時として扱っています。</p>
+</div>
+</div>
+
+<script>
+(function(){
+"use strict";
+var RAD=Math.PI/180;
+var BR=['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'];
+var ST=['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'];
+var PAL=['命宮','兄弟宮','夫妻宮','子女宮','財帛宮','疾厄宮','遷移宮','交友宮','官祿宮','田宅宮','福德宮','父母宮'];
+
+/* ---------- 暦法：朔と中気から旧暦を求める ---------- */
+function jdFromYMD(y,m,d){if(m<=2){y-=1;m+=12;}var a=Math.floor(y/100),b=2-a+Math.floor(a/4);
+ return Math.floor(365.25*(y+4716))+Math.floor(30.6001*(m+1))+d+b-1524.5;}
+function ymdFromJD(jd){jd+=0.5;var z=Math.floor(jd),f=jd-z,a;
+ if(z<2299161)a=z;else{var al=Math.floor((z-1867216.25)/36524.25);a=z+1+al-Math.floor(al/4);}
+ var b=a+1524,c=Math.floor((b-122.1)/365.25),d=Math.floor(365.25*c),e=Math.floor((b-d)/30.6001);
+ var day=b-d-Math.floor(30.6001*e)+f,month=e<14?e-1:e-13,year=month>2?c-4716:c-4715;
+ return{y:year,m:month,d:Math.floor(day)};}
+function newMoonJDE(k){var T=k/1236.85,T2=T*T,T3=T2*T,T4=T3*T;
+ var jde=2451550.09766+29.530588861*k+0.00015437*T2-0.000000150*T3+0.00000000073*T4;
+ var E=1-0.002516*T-0.0000074*T2;
+ var M=(2.5534+29.10535670*k-0.0000014*T2-0.00000011*T3)*RAD;
+ var Mp=(201.5643+385.81693528*k+0.0107582*T2+0.00001238*T3-0.000000058*T4)*RAD;
+ var F=(160.7108+390.67050284*k-0.0016118*T2-0.00000227*T3+0.000000011*T4)*RAD;
+ var O=(124.7746-1.56375588*k+0.0020672*T2+0.00000215*T3)*RAD,c=0;
+ c+=-0.40720*Math.sin(Mp);c+=0.17241*E*Math.sin(M);c+=0.01608*Math.sin(2*Mp);
+ c+=0.01039*Math.sin(2*F);c+=0.00739*E*Math.sin(Mp-M);c+=-0.00514*E*Math.sin(Mp+M);
+ c+=0.00208*E*E*Math.sin(2*M);c+=-0.00111*Math.sin(Mp-2*F);c+=-0.00057*Math.sin(Mp+2*F);
+ c+=0.00056*E*Math.sin(2*Mp+M);c+=-0.00042*Math.sin(3*Mp);c+=0.00042*E*Math.sin(M+2*F);
+ c+=0.00038*E*Math.sin(M-2*F);c+=-0.00024*E*Math.sin(2*Mp-M);c+=-0.00017*Math.sin(O);
+ c+=-0.00007*Math.sin(Mp+2*M);c+=0.00004*Math.sin(2*Mp-2*F);c+=0.00004*Math.sin(3*M);
+ c+=0.00003*Math.sin(Mp+M-2*F);c+=0.00003*Math.sin(2*Mp+2*F);c+=-0.00003*Math.sin(Mp+M+2*F);
+ c+=0.00003*Math.sin(Mp-M+2*F);c+=-0.00002*Math.sin(Mp-M-2*F);c+=-0.00002*Math.sin(3*Mp+M);
+ c+=0.00002*Math.sin(4*Mp);jde+=c;var A=0;
+ A+=0.000325*Math.sin((299.77+0.107408*k-0.009173*T2)*RAD);
+ A+=0.000165*Math.sin((251.88+0.016321*k)*RAD);A+=0.000164*Math.sin((251.83+26.651886*k)*RAD);
+ A+=0.000126*Math.sin((349.42+36.412478*k)*RAD);A+=0.000110*Math.sin((84.66+18.206239*k)*RAD);
+ A+=0.000062*Math.sin((141.74+53.303771*k)*RAD);A+=0.000060*Math.sin((207.14+2.453732*k)*RAD);
+ A+=0.000056*Math.sin((154.84+7.306860*k)*RAD);A+=0.000047*Math.sin((34.52+27.261239*k)*RAD);
+ A+=0.000042*Math.sin((207.19+0.121824*k)*RAD);A+=0.000040*Math.sin((291.34+1.844379*k)*RAD);
+ A+=0.000037*Math.sin((161.72+24.198154*k)*RAD);A+=0.000035*Math.sin((239.56+25.513099*k)*RAD);
+ A+=0.000023*Math.sin((331.55+3.592518*k)*RAD);return jde+A;}
+function deltaT(y){var t;
+ if(y>=1986&&y<2005){t=y-2000;return 63.86+0.3345*t-0.060374*t*t+0.0017275*Math.pow(t,3)+0.000651814*Math.pow(t,4)+0.00002373599*Math.pow(t,5);}
+ if(y>=2005&&y<2050){t=y-2000;return 62.92+0.32217*t+0.005589*t*t;}
+ if(y>=1961&&y<1986){t=y-1975;return 45.45+1.067*t-t*t/260-Math.pow(t,3)/718;}
+ if(y>=1941&&y<1961){t=y-1950;return 29.07+0.407*t-t*t/233+Math.pow(t,3)/2547;}
+ if(y>=1920&&y<1941){t=y-1920;return 21.20+0.84493*t-0.076100*t*t+0.0020936*Math.pow(t,3);}
+ if(y>=1900&&y<1920){t=y-1900;return -2.79+1.494119*t-0.0598939*t*t+0.0061966*Math.pow(t,3)-0.000197*Math.pow(t,4);}
+ t=y-2000;return 62.92+0.32217*t+0.005589*t*t;}
+function sunLong(jdTT){var T=(jdTT-2451545.0)/36525.0;
+ var L0=280.46646+36000.76983*T+0.0003032*T*T;
+ var M=357.52911+35999.05029*T-0.0001537*T*T,Mr=M*RAD;
+ var C=(1.914602-0.004817*T-0.000014*T*T)*Math.sin(Mr)+(0.019993-0.000101*T)*Math.sin(2*Mr)+0.000289*Math.sin(3*Mr);
+ var om=125.04-1934.136*T,lam=L0+C-0.00569-0.00478*Math.sin(om*RAD);
+ return((lam%360)+360)%360;}
+var CN_TZ=8/24;
+function cnSerial(jd){var o=ymdFromJD(jd+CN_TZ);return Date.UTC(o.y,o.m-1,o.d)/86400000;}
+function newMoons(y0,y1){var k0=Math.floor((y0-2000)*12.3685)-3,k1=Math.ceil((y1-2000)*12.3685)+3,out=[];
+ for(var k=k0;k<=k1;k++){var jde=newMoonJDE(k),yr=ymdFromJD(jde).y,jd=jde-deltaT(yr)/86400;
+  out.push({s:cnSerial(jd),jd:jd});}
+ out.sort(function(a,b){return a.jd-b.jd;});return out;}
+function solarTermJD(year,deg){var jd=jdFromYMD(year,1,1)+((((deg-280)%360)+360)%360)*365.2422/360;
+ for(var i=0;i<60;i++){var lam=sunLong(jd+deltaT(year)/86400);
+  var diff=(((lam-deg+180)%360)+360)%360-180;if(Math.abs(diff)<1e-7)break;jd-=diff*365.2422/360;}
+ return jd;}
+function toLunar(y,m,d){
+ var target=Date.UTC(y,m-1,d)/86400000,res={};
+ for(var bi=0;bi<2;bi++){
+  var base=y-1+bi;
+  var ws=cnSerial(solarTermJD(base,270)),wsn=cnSerial(solarTermJD(base+1,270));
+  var nms=newMoons(base-1,base+2);
+  function startBefore(dd){var last=null;for(var i=0;i<nms.length;i++){if(nms[i].s<=dd)last=nms[i].s;}return last;}
+  var m11=startBefore(ws),m11n=startBefore(wsn),starts=[];
+  for(var i=0;i<nms.length;i++)if(nms[i].s>=m11&&nms[i].s<=m11n)starts.push(nms[i].s);
+  var n=starts.length-1,zq=[];
+  for(var q=0;q<14;q++){var deg=(270+30*q)%360;
+   for(var cy=base;cy<=base+1;cy++){var dd=cnSerial(solarTermJD(cy,deg));
+    if(dd>=m11&&dd<=m11n){zq.push(dd);break;}}}
+  var leapIdx=null;
+  if(n===13){for(var i2=0;i2<n;i2++){var s=starts[i2],e=starts[i2+1],has=false;
+    for(var z=0;z<zq.length;z++)if(zq[z]>=s&&zq[z]<e){has=true;break;}
+    if(!has){leapIdx=i2;break;}}if(leapIdx===null)leapIdx=12;}
+  var num=11;
+  for(var i3=0;i3<n;i3++){
+   if(leapIdx!==null&&i3===leapIdx){var prev=((num-2)%12+12)%12+1;res[starts[i3]]=[prev,true];}
+   else{res[starts[i3]]=[num,false];num=num%12+1;}}
+ }
+ var keys=Object.keys(res).map(Number).sort(function(a,b){return a-b;}),p=null;
+ for(var kk=0;kk<keys.length;kk++){if(keys[kk]<=target)p=keys[kk];else break;}
+ if(p===null)return null;
+ return{month:res[p][0],day:target-p+1,leap:res[p][1]};}
+
+/* ---------- 紫微斗数 ---------- */
+var NAYIN=['金','金','火','火','木','木','土','土','金','金','火','火','水','水','土','土',
+ '金','金','木','木','水','水','土','土','火','火','木','木','水','水'];
+var BUREAU={'金':['金四局',4],'木':['木三局',3],'水':['水二局',2],'火':['火六局',6],'土':['土五局',5]};
+function gzIndex(s,b){for(var i=0;i<60;i++)if(ST[i%10]===s&&BR[i%12]===b)return i;return -1;}
+function palaceStem(ys,bi){
+ var tiger={'甲':'丙','己':'丙','乙':'戊','庚':'戊','丙':'庚','辛':'庚','丁':'壬','壬':'壬','戊':'甲','癸':'甲'}[ys];
+ return ST[(ST.indexOf(tiger)+(((bi-2)%12)+12)%12)%10];}
+function ziweiPos(n,day){var q=Math.ceil(day/n),r=q*n-day,pos=(2+q-1)%12;
+ if(r===0)return pos;return r%2===1?((pos-r)%12+12)%12:(pos+r)%12;}
+function hourBranch(h,mi){var t=h+mi/60;if(t>=23||t<1)return 0;return Math.floor((t+1)/2);}
+
+var SIHUA={'甲':['廉貞','破軍','武曲','太陽'],'乙':['天機','天梁','紫微','太陰'],
+ '丙':['天同','天機','文昌','廉貞'],'丁':['太陰','天同','天機','巨門'],
+ '戊':['貪狼','太陰','右弼','天機'],'己':['武曲','貪狼','天梁','文曲'],
+ '庚':['太陽','武曲','太陰','天同'],'辛':['巨門','太陽','文曲','文昌'],
+ '壬':['天梁','紫微','左輔','武曲'],'癸':['破軍','巨門','太陰','貪狼']};
+var MAIN14=['紫微','天機','太陽','武曲','天同','廉貞','天府','太陰','貪狼','巨門','天相','天梁','七殺','破軍'];
+var BAD=['擎羊','陀羅','火星','鈴星','地空','地劫'];
+var PREF=[['東京',139.69],['北海道',141.35],['青森',140.74],['岩手',141.15],['宮城',140.87],
+ ['秋田',140.10],['山形',140.36],['福島',140.47],['茨城',140.45],['栃木',139.88],['群馬',139.06],
+ ['埼玉',139.65],['千葉',140.12],['神奈川',139.64],['新潟',139.02],['富山',137.21],['石川',136.63],
+ ['福井',136.22],['山梨',138.57],['長野',138.18],['岐阜',136.72],['静岡',138.38],['愛知',136.91],
+ ['三重',136.51],['滋賀',135.87],['京都',135.76],['大阪',135.52],['兵庫',135.18],['奈良',135.83],
+ ['和歌山',135.17],['鳥取',134.24],['島根',133.05],['岡山',133.93],['広島',132.46],['山口',131.47],
+ ['徳島',134.55],['香川',134.04],['愛媛',132.77],['高知',133.53],['福岡',130.42],['佐賀',130.30],
+ ['長崎',129.87],['熊本',130.71],['大分',131.61],['宮崎',131.42],['鹿児島',130.56],['沖縄',127.68]];
+
+function chart(y,mo,d,h,mi,gender){
+ var lu=toLunar(y,mo,d);if(!lu)return null;
+ var ly=(mo<=2&&lu.month>=11)?y-1:y;
+ var ys=ST[((ly-4)%10+10)%10],yb=BR[((ly-4)%12+12)%12];
+ var hb=hourBranch(h,mi);
+ var mpal=(2+(lu.month-1))%12;
+ var ming=((mpal-hb)%12+12)%12, shen=(mpal+hb)%12;
+ var ms=palaceStem(ys,ming);
+ var el=NAYIN[Math.floor(gzIndex(ms,BR[ming])/2)];
+ var bu=BUREAU[el],bn=bu[1];
+ var zw=ziweiPos(bn,lu.day);
+ var stars={};for(var i=0;i<12;i++)stars[i]=[];
+ function put(i,n){stars[((i%12)+12)%12].push(n);}
+ put(zw,'紫微');put(zw-1,'天機');put(zw-3,'太陽');put(zw-4,'武曲');put(zw-5,'天同');put(zw-8,'廉貞');
+ var tf=((4-zw)%12+12)%12;
+ put(tf,'天府');put(tf+1,'太陰');put(tf+2,'貪狼');put(tf+3,'巨門');
+ put(tf+4,'天相');put(tf+5,'天梁');put(tf+6,'七殺');put(tf+10,'破軍');
+ put(4+(lu.month-1),'左輔');put(10-(lu.month-1),'右弼');
+ put(10-hb,'文昌');put(4+hb,'文曲');
+ put({'甲':1,'戊':1,'庚':1,'乙':0,'己':0,'丙':11,'丁':11,'辛':6,'壬':3,'癸':3}[ys],'天魁');
+ put({'甲':7,'戊':7,'庚':7,'乙':8,'己':8,'丙':9,'丁':9,'辛':2,'壬':5,'癸':5}[ys],'天鉞');
+ var lp={'甲':2,'乙':3,'丙':5,'丁':6,'戊':5,'己':6,'庚':8,'辛':9,'壬':11,'癸':0}[ys];
+ put(lp,'祿存');put(lp+1,'擎羊');put(lp-1,'陀羅');
+ var ybi=BR.indexOf(yb),fs,bs;
+ if(ybi===2||ybi===6||ybi===10){fs=1;bs=3;}
+ else if(ybi===8||ybi===0||ybi===4){fs=2;bs=10;}
+ else if(ybi===5||ybi===9||ybi===1){fs=3;bs=10;}
+ else{fs=9;bs=10;}
+ put(fs+hb,'火星');put(bs+hb,'鈴星');
+ put(11+hb,'地劫');put(11-hb,'地空');
+ put({2:8,6:8,10:8,8:2,0:2,4:2,5:11,9:11,1:11,11:5,3:5,7:5}[ybi],'天馬');
+ var hua={},sh=SIHUA[ys],hn=['祿','權','科','忌'];
+ for(var q=0;q<4;q++)hua[sh[q]]=hn[q];
+ var names={};for(var p=0;p<12;p++)names[((ming-p)%12+12)%12]=PAL[p];
+ var fwd=(ST.indexOf(ys)%2===0)===(gender==='M');
+ var dx={};for(var r=0;r<12;r++){var idx=fwd?(ming+r)%12:((ming-r)%12+12)%12;dx[idx]=[bn+r*10,bn+r*10+9];}
+ return{lunar:lu,ys:ys,yb:yb,ly:ly,hb:hb,ming:ming,shen:shen,bureau:bu[0],bn:bn,
+  zw:zw,stars:stars,names:names,hua:hua,dx:dx,fwd:fwd};}
+
+/* 命宮の型 */
+function kata(c){
+ var m=c.stars[c.ming].filter(function(s){return MAIN14.indexOf(s)>=0;});
+ if(m.length===0){
+  var op=c.stars[(c.ming+6)%12].filter(function(s){return MAIN14.indexOf(s)>=0;});
+  return{label:'空宮',full:'空宮（対宮 '+(op.join('')||'—')+'）',empty:true,stars:op};}
+ return{label:m.join(''),full:m.join('')+'・'+BR[c.ming],empty:false,stars:m};}
+
+/* 有名格局の判定（代表的なもののみ） */
+function kakukyoku(c){
+ var k=[],m=c.stars[c.ming],b=BR[c.ming];
+ var has=function(x){return m.indexOf(x)>=0;};
+ if(has('巨門')&&(b==='子'||b==='午'))k.push('石中隠玉格');
+ if(has('紫微')&&has('天府'))k.push('紫府同宮格');
+ if(has('太陽')&&b==='辰')k.push('日照雷門格');
+ if(has('太陰')&&(b==='亥'))k.push('月朗天門格');
+ if(has('武曲')&&has('貪狼')&&(b==='丑'||b==='未'))k.push('武貪同行格');
+ if(has('廉貞')&&has('天相')&&(b==='子'||b==='午'))k.push('雄宿朝元格');
+ if(has('天梁')&&has('天同')&&(b==='寅'||b==='申'))k.push('機月同梁格');
+ if(has('七殺')&&(b==='寅'||b==='申'))k.push('七殺朝斗格');
+ if(m.indexOf('祿存')>=0&&m.indexOf('天馬')>=0)k.push('祿馬交馳格');
+ return k;}
+
+/* ---------- キャラクター ---------- */
+var CHAR={
+'紫微':{bg:'#e4dbef',robe:'#5b3f7a',robe2:'#4a3266',dark:'#3a3048',belt:'#d0aa55',ac:'#5b3f7a',face:'calm',
+ crown:'<rect x="162" y="104" width="56" height="14" rx="4" fill="#d0aa55"/><rect x="166" y="116" width="48" height="8" rx="3" fill="#b8933f"/><circle cx="190" cy="100" r="6" fill="#e2c574"/>',
+ limbs:'<path d="M152 202 Q145 228 163 242" stroke="#6d4d90" stroke-width="17" fill="none" stroke-linecap="round"/><path d="M228 202 Q235 228 217 242" stroke="#6d4d90" stroke-width="17" fill="none" stroke-linecap="round"/><rect x="182" y="196" width="16" height="72" rx="6" fill="#efe6d2"/><rect x="182" y="196" width="16" height="10" rx="5" fill="#d6c197"/><circle cx="164" cy="243" r="9" fill="#f4d5b6"/><circle cx="216" cy="243" r="9" fill="#f4d5b6"/>',
+ lb:'統率と品格の星',el:'陰土 ／ 化気為尊'},
+'天機':{bg:'#dfe9d4',robe:'#6e9350',robe2:'#5b7b41',dark:'#2f3d2a',belt:'#496434',ac:'#5b7b41',face:'calm',
+ limbs:'<path d="M152 202 Q140 224 148 242" stroke="#89ac6b" stroke-width="17" fill="none" stroke-linecap="round"/><path d="M228 202 Q242 216 234 196" stroke="#89ac6b" stroke-width="17" fill="none" stroke-linecap="round"/><circle cx="236" cy="166" r="20" fill="none" stroke="#9a9ea6" stroke-width="7"/><rect x="232" y="138" width="8" height="9" rx="2" fill="#9a9ea6"/><rect x="232" y="185" width="8" height="9" rx="2" fill="#9a9ea6"/><rect x="208" y="162" width="9" height="8" rx="2" fill="#9a9ea6"/><rect x="255" y="162" width="9" height="8" rx="2" fill="#9a9ea6"/><rect x="140" y="220" width="22" height="5" rx="2.5" fill="#c9a86a"/><rect x="140" y="230" width="22" height="5" rx="2.5" fill="#c9a86a"/><rect x="140" y="240" width="22" height="5" rx="2.5" fill="#c9a86a"/><circle cx="150" cy="246" r="9" fill="#f4d5b6"/><circle cx="234" cy="192" r="9" fill="#f4d5b6"/>',
+ lb:'知略と変化の星',el:'陰木 ／ 化気為善'},
+'太陽':{bg:'#f7e3cf',robe:'#d9682f',robe2:'#b95526',dark:'#5a3524',belt:'#a84b20',ac:'#c85c28',face:'smile',
+ limbs:'<path d="M152 202 Q140 228 148 248" stroke="#e8834b" stroke-width="17" fill="none" stroke-linecap="round"/><path d="M228 202 Q244 210 240 186" stroke="#e8834b" stroke-width="17" fill="none" stroke-linecap="round"/><rect x="236" y="132" width="6" height="48" rx="3" fill="#8a6d4e"/><circle cx="239" cy="116" r="21" fill="#f2c14e"/><circle cx="239" cy="116" r="12" fill="#f7dc94"/><path d="M239 84 L239 92" stroke="#f2c14e" stroke-width="3" stroke-linecap="round"/><path d="M262 93 L257 98" stroke="#f2c14e" stroke-width="3" stroke-linecap="round"/><path d="M216 93 L221 98" stroke="#f2c14e" stroke-width="3" stroke-linecap="round"/><circle cx="148" cy="250" r="9" fill="#f4d5b6"/><circle cx="240" cy="184" r="9" fill="#f4d5b6"/>',
+ lb:'公と施しの星',el:'陽火 ／ 化気為貴'},
+'武曲':{bg:'#dbe4e8',robe:'#3c6076',robe2:'#325063',dark:'#2c3a44',belt:'#9fb4c0',ac:'#3c6076',face:'firm',
+ extra:'<rect x="176" y="244" width="28" height="20" rx="4" fill="#325063"/>',
+ limbs:'<path d="M152 202 Q140 226 146 244" stroke="#4a7089" stroke-width="17" fill="none" stroke-linecap="round"/><path d="M228 202 Q242 218 238 200" stroke="#4a7089" stroke-width="17" fill="none" stroke-linecap="round"/><rect x="234" y="128" width="7" height="72" rx="3" fill="#8a949c"/><rect x="198" y="126" width="80" height="5" rx="2.5" fill="#8a949c"/><path d="M204 131 L204 148" stroke="#8a949c" stroke-width="2" fill="none"/><path d="M272 131 L272 152" stroke="#8a949c" stroke-width="2" fill="none"/><path d="M192 148 q12 14 24 0 Z" fill="#b6c0c7"/><path d="M260 152 q12 14 24 0 Z" fill="#b6c0c7"/><circle cx="147" cy="246" r="9" fill="#f4d5b6"/><circle cx="238" cy="198" r="9" fill="#f4d5b6"/>',
+ lb:'実行と財の星',el:'陰金 ／ 化気為財'},
+'天同':{bg:'#d8ebe9',ac:'#3d7c7a',dark:'#3a4a4a',
+ figure:'<rect x="146" y="286" width="88" height="18" rx="9" fill="#a98a63"/><path d="M166 192 L214 192 Q230 192 232 210 L240 274 Q242 288 228 288 L152 288 Q138 288 140 274 L148 210 Q150 192 166 192 Z" fill="#5aa8a6"/><path d="M176 192 L190 210 L204 192 Z" fill="#48908e"/><rect x="154" y="248" width="72" height="6" rx="3" fill="#3d7c7a"/><circle cx="190" cy="158" r="32" fill="#f4d5b6"/><path d="M158 156 a32 32 0 0 1 64 0 q-32 -16 -64 0 Z" fill="#3a4a4a"/><path d="M175 160 q5 5 10 0" stroke="#3a4a4a" stroke-width="2.4" fill="none" stroke-linecap="round"/><path d="M196 160 q5 5 10 0" stroke="#3a4a4a" stroke-width="2.4" fill="none" stroke-linecap="round"/><path d="M181 172 q9 9 18 0" stroke="#3a4a4a" stroke-width="2.2" fill="none" stroke-linecap="round"/><circle cx="165" cy="171" r="5.5" fill="#eab9a4" opacity="0.8"/><circle cx="215" cy="171" r="5.5" fill="#eab9a4" opacity="0.8"/><path d="M150 214 Q140 234 154 244" stroke="#77c1bf" stroke-width="17" fill="none" stroke-linecap="round"/><path d="M230 214 Q240 234 226 244" stroke="#77c1bf" stroke-width="17" fill="none" stroke-linecap="round"/><path d="M172 224 q0 20 18 20 q18 0 18 -20 Z" fill="#efe6d2"/><rect x="170" y="220" width="40" height="5" rx="2.5" fill="#d6c197"/><path d="M183 208 q4 -8 0 -14" stroke="#b9cfce" stroke-width="2.4" fill="none" stroke-linecap="round"/><path d="M197 208 q4 -8 0 -14" stroke="#b9cfce" stroke-width="2.4" fill="none" stroke-linecap="round"/><circle cx="156" cy="246" r="9" fill="#f4d5b6"/><circle cx="224" cy="246" r="9" fill="#f4d5b6"/>',
+ lb:'享楽と福気の星',el:'陽水 ／ 化気為福'},
+'廉貞':{bg:'#eed9dc',robe:'#9b3247',robe2:'#7d2739',dark:'#3f2027',belt:'#5f1e2c',ac:'#9b3247',face:'firm',
+ limbs:'<path d="M152 202 Q140 224 150 240" stroke="#b44a5e" stroke-width="17" fill="none" stroke-linecap="round"/><path d="M228 202 Q240 222 230 240" stroke="#b44a5e" stroke-width="17" fill="none" stroke-linecap="round"/><rect x="138" y="214" width="20" height="52" rx="4" fill="#e6d6b4"/><rect x="138" y="214" width="20" height="8" rx="3" fill="#c9b183"/><path d="M143 232 L153 232" stroke="#8c7a56" stroke-width="1.6"/><path d="M143 240 L153 240" stroke="#8c7a56" stroke-width="1.6"/><path d="M143 248 L153 248" stroke="#8c7a56" stroke-width="1.6"/><rect x="230" y="188" width="6" height="54" rx="3" fill="#c9a86a"/><path d="M233 188 q-7 -12 0 -24 q7 12 0 24 Z" fill="#3f2027"/><circle cx="151" cy="242" r="9" fill="#f4d5b6"/><circle cx="232" cy="242" r="9" fill="#f4d5b6"/>',
+ lb:'規律と情念の星',el:'陰火 ／ 化気為囚'},
+'天府':{bg:'#f0e6cd',robe:'#c99a2e',robe2:'#ab8123',dark:'#4a3f2a',belt:'#7d6320',ac:'#a8801f',face:'smile',
+ limbs:'<path d="M152 202 Q142 226 160 236" stroke="#d8ad46" stroke-width="17" fill="none" stroke-linecap="round"/><path d="M228 202 Q238 226 220 236" stroke="#d8ad46" stroke-width="17" fill="none" stroke-linecap="round"/><circle cx="190" cy="212" r="17" fill="none" stroke="#9a9ea6" stroke-width="7"/><rect x="186" y="226" width="8" height="42" rx="3" fill="#9a9ea6"/><rect x="194" y="246" width="12" height="7" rx="2" fill="#9a9ea6"/><rect x="194" y="258" width="12" height="7" rx="2" fill="#9a9ea6"/><circle cx="161" cy="238" r="9" fill="#f4d5b6"/><circle cx="219" cy="238" r="9" fill="#f4d5b6"/>',
+ lb:'蓄積と安定の星',el:'陽土 ／ 化気為庫'},
+'太陰':{bg:'#dee1ea',robe:'#6b7690',robe2:'#59647c',dark:'#333a48',belt:'#4a5468',ac:'#59647c',face:'closed',
+ behind:'<circle cx="243" cy="132" r="26" fill="#eef0f6"/><circle cx="252" cy="125" r="22" fill="#dee1ea"/>',
+ hairx:'<path d="M158 148 q-4 30 4 44 q6 -22 4 -44 Z" fill="#333a48"/><path d="M222 148 q4 30 -4 44 q-6 -22 -4 -44 Z" fill="#333a48"/>',
+ limbs:'<path d="M152 202 Q142 224 162 238" stroke="#8894ad" stroke-width="17" fill="none" stroke-linecap="round"/><path d="M228 202 Q238 224 218 238" stroke="#8894ad" stroke-width="17" fill="none" stroke-linecap="round"/><circle cx="190" cy="222" r="22" fill="#c3cbd8"/><circle cx="190" cy="222" r="15" fill="#eef1f6"/><circle cx="163" cy="240" r="9" fill="#f4d5b6"/><circle cx="217" cy="240" r="9" fill="#f4d5b6"/>',
+ lb:'内省と養いの星',el:'陰水 ／ 化気為富'},
+'貪狼':{bg:'#f0dce8',robe:'#b0568e',robe2:'#914675',dark:'#43263c',belt:'#7c3a63',ac:'#b0568e',face:'smile',
+ limbs:'<path d="M152 202 Q138 220 146 236" stroke="#c672a5" stroke-width="17" fill="none" stroke-linecap="round"/><path d="M228 202 Q242 220 232 238" stroke="#c672a5" stroke-width="17" fill="none" stroke-linecap="round"/><path d="M126 218 q0 20 18 20 q18 0 18 -20 Z" fill="#d9c07a"/><rect x="141" y="238" width="6" height="14" rx="2" fill="#d9c07a"/><rect x="132" y="250" width="24" height="5" rx="2.5" fill="#d9c07a"/><rect x="236" y="196" width="5" height="44" rx="2.5" fill="#6e9350"/><circle cx="238" cy="188" r="9" fill="#e08fb8"/><circle cx="228" cy="196" r="8" fill="#e8a7c8"/><circle cx="248" cy="196" r="8" fill="#e8a7c8"/><circle cx="238" cy="196" r="5" fill="#f2c14e"/><circle cx="148" cy="240" r="9" fill="#f4d5b6"/><circle cx="234" cy="240" r="9" fill="#f4d5b6"/>',
+ lb:'欲望と多才の星',el:'陽木 ／ 化気為桃花'},
+'巨門':{bg:'#e7dcf2',robe:'#7c66a9',robe2:'#6a5495',dark:'#453b52',ac:'#7c66a9',face:'smile',
+ limbs:'<path d="M152 202 Q145 228 163 240" stroke="#8d76bb" stroke-width="17" fill="none" stroke-linecap="round"/><path d="M228 202 Q235 228 217 240" stroke="#8d76bb" stroke-width="17" fill="none" stroke-linecap="round"/><rect x="152" y="232" width="76" height="16" rx="8" fill="#efe0c0"/><circle cx="152" cy="240" r="9" fill="#d6c197"/><circle cx="228" cy="240" r="9" fill="#d6c197"/><circle cx="164" cy="241" r="9" fill="#f4d5b6"/><circle cx="216" cy="241" r="9" fill="#f4d5b6"/>',
+ lb:'弁論と探究の星',el:'陰水 ／ 化気為暗'},
+'天相':{bg:'#d9e5ee',robe:'#6f9fc4',robe2:'#5c88ab',dark:'#2e3f4d',belt:'#4a7492',ac:'#4a7492',face:'calm',
+ limbs:'<path d="M152 202 Q144 222 164 232" stroke="#8bb6d6" stroke-width="17" fill="none" stroke-linecap="round"/><path d="M228 202 Q236 222 216 232" stroke="#8bb6d6" stroke-width="17" fill="none" stroke-linecap="round"/><rect x="172" y="196" width="36" height="26" rx="4" fill="#c8543f"/><rect x="178" y="186" width="24" height="12" rx="4" fill="#a8422f"/><rect x="176" y="222" width="28" height="6" rx="2" fill="#a8422f"/><circle cx="165" cy="234" r="9" fill="#f4d5b6"/><circle cx="215" cy="234" r="9" fill="#f4d5b6"/>',
+ lb:'補佐と信義の星',el:'陽水 ／ 化気為印'},
+'天梁':{bg:'#ece2cd',robe:'#a5813f',robe2:'#8b6a30',dark:'#4c4436',belt:'#6d5426',ac:'#8b6a30',face:'old',hair:'#c9c4bb',
+ limbs:'<path d="M152 202 Q142 230 151 250" stroke="#b8934c" stroke-width="17" fill="none" stroke-linecap="round"/><path d="M228 202 Q238 228 228 244" stroke="#b8934c" stroke-width="17" fill="none" stroke-linecap="round"/><rect x="226" y="112" width="8" height="188" rx="4" fill="#8a6d4e"/><path d="M230 112 q-16 -2 -14 -16 q14 -2 14 16 Z" fill="#8a6d4e"/><rect x="140" y="254" width="26" height="30" rx="6" fill="#7f9a6d"/><rect x="146" y="248" width="14" height="8" rx="3" fill="#637954"/><circle cx="230" cy="244" r="9" fill="#f4d5b6"/><circle cx="152" cy="252" r="9" fill="#f4d5b6"/>',
+ lb:'庇護と解厄の星',el:'陽土 ／ 化気為蔭'},
+'七殺':{bg:'#dce3ee',robe:'#3f4d6b',robe2:'#33405a',dark:'#2f3546',belt:'#93a1b8',ac:'#4b5c80',face:'firm',
+ extra:'<rect x="147" y="184" width="26" height="16" rx="8" fill="#56668c"/><rect x="207" y="184" width="26" height="16" rx="8" fill="#56668c"/>',
+ limbs:'<path d="M152 202 Q142 232 153 252" stroke="#4b5c80" stroke-width="17" fill="none" stroke-linecap="round"/><path d="M228 202 Q234 222 226 238" stroke="#4b5c80" stroke-width="17" fill="none" stroke-linecap="round"/><g transform="rotate(20 240 200)"><rect x="236" y="100" width="8" height="200" rx="4" fill="#8a6d4e"/><rect x="230" y="96" width="20" height="7" rx="3.5" fill="#7d8794"/><polygon points="236,98 244,98 240,58" fill="#aeb8c6"/></g><circle cx="226" cy="238" r="9" fill="#f4d5b6"/><circle cx="153" cy="254" r="9" fill="#f4d5b6"/>',
+ lb:'決断と突破の星',el:'陰金 ／ 化気為将'},
+'破軍':{bg:'#e0dae6',robe:'#453a5c',robe2:'#372e4a',dark:'#241f2e',ac:'#63537f',face:'firm',broken:1,
+ extra:'<path d="M198 244 L214 240 L210 262 L226 258 L206 288 L210 264 L196 268 Z" fill="#2f2740"/>',
+ limbs:'<path d="M152 202 Q140 226 148 246" stroke="#63537f" stroke-width="17" fill="none" stroke-linecap="round"/><path d="M228 202 Q244 214 240 190" stroke="#63537f" stroke-width="17" fill="none" stroke-linecap="round"/><rect x="237" y="112" width="7" height="82" rx="3" fill="#8a6d4e"/><path d="M237 118 L280 124 L268 138 L282 150 L237 158 Z" fill="#8e3a4c"/><path d="M266 152 L278 166 L262 162 Z" fill="#8e3a4c"/><circle cx="148" cy="248" r="9" fill="#f4d5b6"/><circle cx="240" cy="188" r="9" fill="#f4d5b6"/>',
+ lb:'破壊と刷新の星',el:'陰水 ／ 化気為耗'}};
+
+function faceSVG(t,c,h){
+ if(t==='firm')return '<path d="M171 141 L184 146" stroke="'+c+'" stroke-width="2.6" stroke-linecap="round"/><path d="M209 141 L196 146" stroke="'+c+'" stroke-width="2.6" stroke-linecap="round"/><circle cx="180" cy="153" r="3.2" fill="'+c+'"/><circle cx="201" cy="153" r="3.2" fill="'+c+'"/><path d="M183 165 L197 165" stroke="'+c+'" stroke-width="2.4" stroke-linecap="round"/>';
+ if(t==='closed')return '<path d="M176 153 q5 4 9 0" stroke="'+c+'" stroke-width="2.4" fill="none" stroke-linecap="round"/><path d="M196 153 q5 4 9 0" stroke="'+c+'" stroke-width="2.4" fill="none" stroke-linecap="round"/><path d="M184 165 q6 5 12 0" stroke="'+c+'" stroke-width="2.2" fill="none" stroke-linecap="round"/>';
+ if(t==='old')return '<path d="M170 142 L183 145" stroke="'+h+'" stroke-width="2.6" stroke-linecap="round"/><path d="M210 142 L197 145" stroke="'+h+'" stroke-width="2.6" stroke-linecap="round"/><circle cx="180" cy="153" r="3.2" fill="'+c+'"/><circle cx="201" cy="153" r="3.2" fill="'+c+'"/><path d="M183 164 q7 5 14 0" stroke="'+c+'" stroke-width="2.2" fill="none" stroke-linecap="round"/><path d="M180 172 q10 16 21 0" fill="'+h+'"/>';
+ if(t==='smile')return '<circle cx="180" cy="152" r="3.2" fill="'+c+'"/><circle cx="201" cy="152" r="3.2" fill="'+c+'"/><path d="M182 163 q8 6 16 0" stroke="'+c+'" stroke-width="2.2" fill="none" stroke-linecap="round"/><circle cx="166" cy="161" r="5" fill="#eab9a4" opacity="0.75"/><circle cx="215" cy="161" r="5" fill="#eab9a4" opacity="0.75"/>';
+ return '<circle cx="180" cy="152" r="3.2" fill="'+c+'"/><circle cx="201" cy="152" r="3.2" fill="'+c+'"/><path d="M184 164 q6 5 12 0" stroke="'+c+'" stroke-width="2.2" fill="none" stroke-linecap="round"/>';
+}
+
+function charSVG(name){
+ var d=CHAR[name];if(!d)return '';
+ var s='<svg viewBox="0 0 380 444" width="100%" role="img" xmlns="http://www.w3.org/2000/svg">';
+ s+='<title>'+name+'</title><desc>'+name+'（'+d.lb+'）のキャラクター</desc>';
+ s+='<rect x="40" y="20" width="300" height="404" rx="14" fill="#f4f0e7"/>';
+ s+='<circle cx="190" cy="186" r="104" fill="'+d.bg+'"/>';
+ s+=(d.behind||'');
+ s+='<rect x="108" y="106" width="164" height="16" rx="8" fill="#bb9670"/>';
+ if(d.broken)s+='<path d="M196 106 L214 106 L204 122 L186 122 Z" fill="#f4f0e7"/>';
+ s+='<rect x="118" y="120" width="16" height="180" rx="8" fill="#cbaa85"/><rect x="246" y="120" width="16" height="180" rx="8" fill="#cbaa85"/>';
+ s+='<ellipse cx="190" cy="310" rx="72" ry="9" fill="#ded3c3"/>';
+ if(d.figure){s+=d.figure;}
+ else{
+  var hair=d.hair||d.dark;
+  s+='<rect x="162" y="292" width="24" height="12" rx="6" fill="'+d.dark+'"/><rect x="194" y="292" width="24" height="12" rx="6" fill="'+d.dark+'"/>';
+  s+='<path d="M168 182 L212 182 Q227 182 229 198 L236 288 Q237 298 227 298 L153 298 Q143 298 144 288 L151 198 Q153 182 168 182 Z" fill="'+d.robe+'"/>';
+  s+='<path d="M176 182 L190 200 L204 182 Z" fill="'+d.robe2+'"/>';
+  if(d.belt)s+='<rect x="158" y="240" width="64" height="6" rx="3" fill="'+d.belt+'"/>';
+  s+=(d.extra||'');
+  s+='<circle cx="190" cy="148" r="31" fill="#f4d5b6"/>';
+  s+='<path d="M159 146 a31 31 0 0 1 62 0 q-31 -15 -62 0 Z" fill="'+hair+'"/>';
+  s+=(d.hairx||'');
+  s+=(d.crown||'');
+  s+=faceSVG(d.face,d.dark,hair);
+  s+=d.limbs;
+ }
+ s+='<text x="190" y="356" text-anchor="middle" font-family="serif" font-size="32" fill="'+d.dark+'" letter-spacing="5">'+name+'</text>';
+ s+='<text x="190" y="380" text-anchor="middle" font-family="serif" font-size="13" fill="'+d.ac+'" letter-spacing="2">'+d.lb+'</text>';
+ s+='<text x="190" y="401" text-anchor="middle" font-family="serif" font-size="11" fill="#8c8578" letter-spacing="2">'+d.el+'</text>';
+ return s+'</svg>';
+}
+
+/* ---------- 描画 ---------- */
+var GRID=[['巳','午','未','申'],['辰',null,null,'酉'],['卯',null,null,'戌'],['寅','丑','子','亥']];
+function esc(s){return String(s).replace(/[&<>]/g,function(x){return{'&':'&amp;','<':'&lt;','>':'&gt;'}[x];});}
+function starHTML(c,name){
+ var cls='s-aux';
+ if(MAIN14.indexOf(name)>=0)cls='s-main';
+ if(BAD.indexOf(name)>=0)cls='s-bad';
+ var h=c.hua[name],sup='';
+ if(h){var m={'祿':'lu','權':'quan','科':'ke','忌':'ji'}[h];sup='<span class="hua '+m+'">'+h+'</span>';}
+ return '<span class="'+cls+'">'+esc(name)+sup+'</span>';}
+
+function render(c){
+ var meta=document.getElementById('meta');
+ var lm=(c.lunar.leap?'閏':'')+c.lunar.month+'月'+c.lunar.day+'日';
+ meta.innerHTML='<span>旧暦 <b>'+lm+'</b></span><span>年干支 <b>'+c.ys+c.yb+'</b></span>'+
+  '<span>時支 <b>'+BR[c.hb]+'時</b></span><span>五行局 <b>'+c.bureau+'</b></span>'+
+  (c.off!==undefined?'<span>時差補正 <b>'+(c.off>0?'+':'')+c.off+'分</b></span>':'');
+ var kt=kata(c),kk=kakukyoku(c),grid=document.getElementById('chart');
+ var html='';
+ for(var r=0;r<4;r++){for(var col=0;col<4;col++){
+  var b=GRID[r][col];
+  if(b===null){ if(r===1&&col===1){
+    html+='<div class="center"><div class="kata">'+esc(kt.label)+'</div>'+
+     '<div class="katasub">'+esc(kt.empty?'命宮は空宮':'命宮 '+BR[c.ming]+'・'+c.bureau)+'</div>'+
+     (kk.length?'<div class="kaku">'+esc(kk.join(' / '))+'</div>':'')+'</div>'; }
+   continue; }
+  var i=BR.indexOf(b),ss=c.stars[i],cls='cell';
+  if(i===c.ming)cls+=' ming';else if(i===c.shen)cls+=' shen';
+  var sh=ss.length?ss.map(function(n){return starHTML(c,n);}).join(''):'<span class="s-empty">空宮</span>';
+  html+='<div class="'+cls+'"><div class="stars">'+sh+'</div><div class="foot">'+
+   '<span class="pname">'+esc(c.names[i])+(i===c.shen?'<span style="color:#7f8698">・身</span>':'')+'</span>'+
+   '<span class="dx">'+c.dx[i][0]+'–'+c.dx[i][1]+'</span></div>'+
+   '<div class="foot"><span class="branch">'+esc(b)+'</span></div></div>';
+ }}
+ grid.innerHTML=html;
+
+ var pri=kt.stars&&kt.stars.length?kt.stars[0]:null;
+ var box=document.getElementById('chara');
+ box.innerHTML=pri?charSVG(pri):'';
+ document.getElementById('rh').textContent='あなたの型は「'+kt.full+'」';
+ var body='命宮は'+BR[c.ming]+'宮、五行局は'+c.bureau+'。'+
+  (kt.empty?'主星が入らない空宮のため、向かい合う'+kt.stars.join('')+'の性質を借りて読みます。'
+          :'命宮の主星は'+kt.stars.join('と')+'です。')+
+  (kk.length?'格局としては'+kk.join('、')+'に該当します。':'');
+ document.getElementById('rp').textContent=body;
+ var more=document.getElementById('more');
+ more.href='#'+encodeURIComponent(kt.label+'-'+BR[c.ming]);
+ more.textContent='「'+kt.label+'」の解説を読む';
+ document.getElementById('copy').onclick=function(){
+  var txt='紫微斗数の命盤を出してみた\n型：'+kt.full+(kk.length?'（'+kk.join('/')+'）':'')+
+   '\n命宮：'+BR[c.ming]+'宮 / '+c.bureau+'\n'+location.href;
+  if(navigator.clipboard){navigator.clipboard.writeText(txt).then(function(){
+   var e=document.getElementById('copy');e.textContent='コピーしました';
+   setTimeout(function(){e.textContent='結果をコピー';},1800);});}
+ };
+ var out=document.getElementById('out');
+ out.style.display='block';out.classList.add('show');
+ /* 計測フック：型ごとのアクセス分布をここで送る
+    例) fetch('/hit?kata='+encodeURIComponent(kt.label+'-'+BR[c.ming])) */
+}
+
+var sel=document.getElementById('pf');
+for(var pi=0;pi<PREF.length;pi++){var o=document.createElement('option');
+ o.value=PREF[pi][1];o.textContent=PREF[pi][0];sel.appendChild(o);}
+
+document.getElementById('f').addEventListener('submit',function(ev){
+ ev.preventDefault();
+ var err=document.getElementById('err');err.hidden=true;
+ var dv=document.getElementById('d').value,tv=document.getElementById('t').value;
+ if(!dv||!tv){err.textContent='生年月日と出生時刻を入れてください。';err.hidden=false;return;}
+ var p=dv.split('-').map(Number),q=tv.split(':').map(Number);
+ if(p[0]<1900||p[0]>2100){err.textContent='1900年から2100年までに対応しています。';err.hidden=false;return;}
+ var lon=parseFloat(sel.value),off=Math.round((lon-135)*4);
+ var dt=new Date(Date.UTC(p[0],p[1]-1,p[2],q[0],q[1])+off*60000);
+ var cy=dt.getUTCFullYear(),cm=dt.getUTCMonth()+1,cd=dt.getUTCDate(),
+     ch=dt.getUTCHours(),cmi=dt.getUTCMinutes();
+ /* 23時台は翌日の子時として扱う（晩子時を採らない流派の慣行） */
+ if(ch===23){var nx=new Date(dt.getTime()+3600000);
+  cy=nx.getUTCFullYear();cm=nx.getUTCMonth()+1;cd=nx.getUTCDate();}
+ try{
+  var c=chart(cy,cm,cd,ch,cmi,document.getElementById('g').value);
+  if(!c)throw new Error('calc');
+  c.off=off;c.corrected=cy+'/'+cm+'/'+cd+' '+String(ch).padStart(2,'0')+':'+String(cmi).padStart(2,'0');
+  render(c);
+  document.getElementById('out').scrollIntoView({behavior:'smooth',block:'start'});
+ }catch(e){err.textContent='計算できませんでした。日付を確認してください。';err.hidden=false;}
+});
+})();
+</script>
+</body>
+</html>
